@@ -1,2 +1,0 @@
-# bias_project
-Test
