@@ -4,14 +4,18 @@ import nipype.interfaces.io as nio
 from nipype.algorithms.misc import TSNR
 from nipype.interfaces import utility as util
 from nipype.interfaces import fsl
+import os
 
 workflow = create_featreg_preproc() #The default name is "featpreproc".
 workflow.base_dir = '/home/gdholla1/workflow_folders'
 
-templates = {'functional_runs':'/home/gdholla1/data/bias_task/preprocessed/slice_time_corrected_file/_subject_id_{subject_id}/_slice_corrector*/run*_unwarped_st.nii.gz'}
+#templates = {'functional_runs':'/home/gdholla1/data/bias_task/preprocessed/slice_time_corrected_file/_subject_id_{subject_id}/_slice_corrector*/run*_unwarped_st.nii.gz'}
 
-#subject_ids = ['PF5T', 'WW2T', 'WSFT', 'KP6T', 'LV2T', 'FMFT', 'HCBT', 'RSIT', 'TS6T', 'UM2T', 'MRCT', 'NM3T', 'SPGT', 'ZK4T', 'GAIT', 'DA9T', 'VL1T', 'BI3T']
-subject_ids = ['FMFT']
+project_folder = '/home/gdholla1/projects/bias/'
+
+templates = {'functional_runs':os.path.join(project_folder, 'data', 'processed', 'slice_time_corrected_file', '_subject_id_{subject_id}', '_slice_corrector*', 'sub-{subject_id}*.nii.gz')}
+
+subject_ids = ['%02d' % i for i in range(1, 20)]
 
 selector = pe.Node(nio.SelectFiles(templates), name='selector')
 selector.iterables = [('subject_id', subject_ids)]
@@ -24,7 +28,8 @@ workflow.get_node('inputspec').iterables = [('fwhm', [0.0, 1.5, 5.0])]
 workflow.inputs.inputspec.highpass = True
 
 ds = pe.Node(nio.DataSink(), name='datasink')
-ds.inputs.base_directory = '/home/gdholla1/data/bias_task/preprocessed/feat_preprocess/'
+#ds.inputs.base_directory = '/home/gdholla1/data/bias_task/preprocessed/feat_preprocess/'
+ds.inputs.base_directory = os.path.join(project_folder, 'data', 'processed', 'feat_preprocess')
 
 workflow.connect(workflow.get_node('outputspec'), 'mean', ds, 'mean')
 workflow.connect(workflow.get_node('outputspec'), 'highpassed_files', ds, 'highpassed_files')
