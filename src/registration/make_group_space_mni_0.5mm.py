@@ -9,6 +9,8 @@ import numpy as np
 from nipype.interfaces.c3 import C3dAffineTool
 import nipype.interfaces.ants as ants
 
+projects_dir = '/home/gdholla1/projects/bias'
+
 reg = pe.MapNode(ants.Registration(), iterfield=['moving_image'], name='antsRegister')
 reg.inputs.transforms = ['Rigid', 'Affine', 'SyN']
 reg.inputs.transform_parameters = [(0.1,), (0.1,), (0.1, 3.0, 0.0)]
@@ -35,7 +37,8 @@ reg.inputs.winsorize_upper_quantile = 0.99
 reg.inputs.fixed_image = '/home/gdholla1/data/MNI_T2_0.5mm_brain.nii.gz'
 
 
-workflow = pe.Workflow(name='make_group_template_ants_mni', base_dir='/home/gdholla1/workflow_folders/')
+workflow = pe.Workflow(name='make_group_template_ants_mni')
+workflow.base_dir = os.path.join(projects_dir, 'workflow_folders')
 
 input_node = pe.Node(util.IdentityInterface(fields=['FLASH']), name='input_node')
 
@@ -103,4 +106,4 @@ for i in xrange(n_iterations):
 workflow.write_graph()
 
 #workflow.run()
-workflow.run(plugin='MultiProc', plugin_args={'n_procs':9})
+workflow.run(plugin='MultiProc', plugin_args={'n_procs':4})
