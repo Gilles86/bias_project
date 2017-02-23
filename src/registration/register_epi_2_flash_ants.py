@@ -1,17 +1,20 @@
 import nipype.pipeline.engine as pe
 import nipype.interfaces.io as nio
+import os
+import numpy as np
 
+project_dir = '/home/gdholla1/projects/bias'
 
-subject_ids = ['KCAT', 'WSFT', 'WW2T', 'TS6T', 'FMFT', 'HCBT', 'PF5T', 'LV2T', 'UM2T', 'MRCT', 'RSIT', 'KP6T', 'NM3T', 'BI3T', 'SC1T', 'SPGT', 'ZK4T', 'GAIT', 'DA9T', 'VL1T']
+workflow = pe.Workflow(name='register_epi2FLASH_ants')
+workflow.base_dir = os.path.join(project_dir, 'workflow_folders')
 
-workflow = pe.Workflow(base_dir='/home/gdholla1/workflow_folders/', name='register_epi2FLASH_ants')
+templates = {'mean_epi':os.path.join(project_dir, 'data', 'processed', 'feat_preprocess', 'mean', '_subject_id_{subject_id}', '_fwhm_0.0', 'sub-{subject_id}_task-randomdotmotion_run-01_bold_unwarped_st_dtype_mcf_mask_gms_mean.nii.gz'),
+             'FLASH':os.path.join(project_dir, 'data', 'derivatives', 'sub-{subject_id}', 'mean_flash', 'sub-{subject_id}_FLASH_echo_11.22_merged_mean_brain.nii.gz')}
 
-templates = {'mean_epi':'/home/gdholla1/data/bias_task/preprocessed/feat_preprocess/mean/_subject_id_{subject_id}/_fwhm_0.0/run1_unwarped_st_dtype_mcf_mask_gms_mean.nii.gz',
-             'FLASH':'/home/gdholla1/data/bias_task/flash_data_std_mean/_subject_id_{subject_id}/e11.22_merged_mean.nii.gz'}
+selector = pe.MapNode(nio.SelectFiles(templates), iterfield='subject_id', name='selector')
+subject_ids = ['%02d' % i for i in np.arange(1, 20)]
 
-selector = pe.Node(nio.SelectFiles(templates), name='selector')
-
-selector.iterables = [('subject_id', subject_ids)]
+selector.iterables = [('subject_id', subject_ids[:1])]
 
 from nipype.interfaces.c3 import C3dAffineTool
 import nipype.interfaces.ants as ants
@@ -43,7 +46,8 @@ reg.inputs.winsorize_upper_quantile = 0.99
 workflow.connect(selector, 'mean_epi', reg, 'moving_image')
 workflow.connect(selector, 'FLASH', reg, 'fixed_image')
 
-ds = pe.Node(nio.DataSink(base_directory='/home/gdholla1/data/bias_task/register_epi2flash_ants'), name='datasink')
+ds = pe.Node(nio.DataSink(), name='datasink')
+ds.inputs.base_directory = os.path.join(project_dir, 'data', 'derivatives', 'registration', 'epi2flash')
 
 workflow.connect(reg, 'composite_transform', ds, 'epi2FLASH_transform')
 workflow.connect(reg, 'inverse_composite_transform', ds, 'FLASH2epi_transform')
