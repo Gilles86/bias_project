@@ -17,7 +17,7 @@ workflow.base_dir = '../../workflow_folders'
 
 selector = pe.Node(nio.SelectFiles(templates), name='selector')
 subject_ids = ['%02d' % i for i in np.arange(1, 20)]
-selector.iterables = [('subject_id', subject_ids), ('mask', ['STh_L', 'STh_R'])]
+selector.iterables = [('subject_id', subject_ids), ('mask', ['STh_L', 'STh_R', 'STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C'])]
 
 # We need to copy the geometrical information of the FLASH image to the mask, because
 # it was changed by the padded BET-procedure.
