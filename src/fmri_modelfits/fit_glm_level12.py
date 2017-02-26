@@ -95,11 +95,11 @@ templates = {'highpassed_files':os.path.join(project_folder, 'data', 'processed'
 
 subject_ids = ['%02d' % i for i in np.arange(1, 20)]
 
-identity.iterables = [('subject_id', subject_ids),
-                      ('mask', ['STh_L', 'STh_R', 'STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C'])]
+identity.iterables = [('subject_id', subject_ids[:1]),
+        ('mask', ['STh_L', 'STh_R', 'STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C'][:2])]
 
 selector = pe.Node(nio.SelectFiles(templates), name='selector')
-selector.iterables = [('fwhm', [0.0])]
+selector.iterables = [('fwhm', [5.0])]
 
 workflow.connect(identity, 'subject_id', selector, 'subject_id')
 workflow.connect(identity, 'mask', selector, 'mask')
@@ -217,7 +217,7 @@ def pickone(input):
     return input[0]
 
 
-workflow.connect(selector, ('mask', pickone), fixedfx, 'flameo.mask_file')
+workflow.connect(selector, 'mask', fixedfx, 'flameo.mask_file')
 
 def num_copes(files):
     return len(files)
@@ -246,7 +246,10 @@ grf_cluster.iterables = [("threshold", [2.6])] #, 2.3
 workflow.connect(smoothestimate, 'dlh', grf_cluster, 'dlh')
 workflow.connect(fixedfx, 'outputspec.zstats', grf_cluster, 'in_file')
 
-workflow.connect(get_volume, ('out_stat', pickone), grf_cluster, 'volume')
+def convert_volume(input):
+    return int(input[1])
+
+workflow.connect(get_volume, ('out_stat', convert_volume), grf_cluster, 'volume')
 
 grf_cluster.inputs.out_threshold_file = True
 
@@ -260,4 +263,4 @@ workflow.connect(fixedfx, 'outputspec.zstats', ds, 'zstats')
 workflow.connect(fixedfx, 'outputspec.copes', ds, 'level2_copes')
 workflow.connect(fixedfx, 'outputspec.varcopes', ds, 'level2_varcopes')
 workflow.connect(fixedfx, 'flameo.tdof', ds, 'level2_tdof')
-workflow.run()
+workflow.run(plugin='MultiProc', plugin_args={'n_procs':8})
