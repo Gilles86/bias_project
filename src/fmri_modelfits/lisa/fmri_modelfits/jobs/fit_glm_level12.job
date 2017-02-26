@@ -1,0 +1,14 @@
+#PBS -lwalltime=6:00:00  
+#PBS -lnodes=1:ppn=16     
+                         # 1 node for this job
+# #PBS -e /home/gholland/projects/bias/logs/
+# #PBS -o /home/gholland/projects/bias/logs/
+#PBS -S /bin/bash
+n=`wc -l < $PBS_NODEFILE`
+echo start of job in directory $PBS_O_WORKDIR
+echo number of nodes is $n
+echo the allocated nodes are:
+cat $PBS_NODEFILE
+echo starting working on problem $PBS_ARRAYID1
+
+python /home/gholland/projects/bias/src/fmri_modelfits/fit_glm_level12.py
