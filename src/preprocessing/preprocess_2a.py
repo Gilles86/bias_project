@@ -24,7 +24,8 @@ workflow.connect(selector, 'functional_runs', workflow.get_node('inputspec'), 'f
 
 #workflow.inputs.inputspec.fwhm = 5
 #workflow.get_node('inputspec').iterables = [('fwhm', [0.0, 1.5, 5.0])]
-workflow.get_node('inputspec').iterables = [('fwhm', [0.0, 5.0])]
+#workflow.get_node('inputspec').iterables = [('fwhm', [0.0, 5.0])]
+workflow.get_node('inputspec').iterables = [('fwhm', [5.0])]
 workflow.inputs.inputspec.highpass = 128. / (2*3)
 
 ds = pe.Node(nio.DataSink(), name='datasink')
