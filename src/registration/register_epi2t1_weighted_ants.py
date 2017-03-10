@@ -45,8 +45,8 @@ workflow.connect(selector, 'mean_epi', reg, 'moving_image')
 workflow.connect(selector, 't1_weighted', reg, 'fixed_image')
 
 ds = pe.Node(nio.DataSink(), name='datasink')
-ds.inputs.base_directory = '../../data/derivatives/registration/epi2t1weighted'
-
+#ds.inputs.base_directory = '../../data/derivatives/registration/epi2t1weighted'
+ds.inputs.base_directory = os.path.join(project_folder, 'data', 'derivatives', 'registration', 'epi2t1weighted')
 
 mni_reg = pe.Node(ants.Registration(args='--float',
                             collapse_output_transforms=True,
@@ -92,4 +92,4 @@ workflow.connect(mni_reg, 'composite_transform', ds, 'struct2mnimat_ants')
 workflow.connect(mni_reg, 'inverse_composite_transform', ds, 'mni2structmat_ants')
 workflow.connect(mni_reg, 'warped_image', ds, 'struct_in_mni_ants')
 
-workflow.run(plugin='MultiProc', plugin_args={'n_procs':4})
+workflow.run(plugin='MultiProc', plugin_args={'n_procs':8})

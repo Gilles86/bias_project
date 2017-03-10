@@ -20,10 +20,10 @@ z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
 v_reg = {'model': 'v ~ 1 + C(difficulty)', 'link_func': lambda x: x}
 
 reg_descr = [z_reg, v_reg]
-model = hddm.HDDMRegressor(data, reg_descr, include='all', group_only_regressors=False, group_only_nodes=['sv', 'st'])
+model = hddm.HDDMRegressor(data, reg_descr, bias=True, include=('sv'), group_only_regressors=False, group_only_nodes=['sv'])
 model.find_starting_values()
 
 
-model.sample(10000, 5000, dbname='../../data/behavior/hddm_fits/traces_start_point.pkl', db='pickle')
+model.sample(10000, 5000, dbname='../../data/behavior/hddm_fits/traces_start_point__.pkl', db='pickle')
 model.print_stats()
-model.save('../../data/behavior/hddm_fits/model_start_point.pickle')
+model.save('../../data/behavior/hddm_fits/model_start_point__.pickle')

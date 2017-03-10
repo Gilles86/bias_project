@@ -14,7 +14,7 @@ templates = {'mean_epi':os.path.join(project_dir, 'data', 'processed', 'feat_pre
 selector = pe.MapNode(nio.SelectFiles(templates), iterfield='subject_id', name='selector')
 subject_ids = ['%02d' % i for i in np.arange(1, 20)]
 
-selector.iterables = [('subject_id', subject_ids[:1])]
+selector.iterables = [('subject_id', subject_ids)]
 
 from nipype.interfaces.c3 import C3dAffineTool
 import nipype.interfaces.ants as ants
@@ -53,6 +53,6 @@ workflow.connect(reg, 'composite_transform', ds, 'epi2FLASH_transform')
 workflow.connect(reg, 'inverse_composite_transform', ds, 'FLASH2epi_transform')
 workflow.connect(reg, 'warped_image', ds, 'mean_epi_in_FLASH_space')
 
-#workflow.run(plugin='MultiProc', plugin_args={'n_procs':8})
-workflow.run()
+workflow.run(plugin='MultiProc', plugin_args={'n_procs':4})
+#workflow.run()
 

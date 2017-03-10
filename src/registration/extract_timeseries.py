@@ -18,7 +18,7 @@ selector = pe.Node(nio.SelectFiles(templates), name='selector')
 subject_ids = ['%02d' % i for i in np.arange(1, 20)]
 
 selector.iterables = [('subject_id', subject_ids),
-                      ('mask', ['STh_L', 'STh_R'])]
+                      ('mask', ['STh_L', 'STh_R', 'STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C'])]
 
 
 ds_extracted =  pe.Node(nio.DataSink(), name='datasink_extracted')
@@ -30,4 +30,5 @@ workflow.connect(selector, 'mask_epi', extracter_highpassed_motion, 'mask')
 workflow.connect(selector, 'highpassed_motion', extracter_highpassed_motion, 'in_file')
 workflow.connect(extracter_highpassed_motion, 'out_file', ds_extracted, 'highpassed_motion')
 
-workflow.run(plugin='MultiProc', plugin_args={'n_procs' : 6})
+#workflow.run(plugin='MultiProc', plugin_args={'n_procs' : 6})
+workflow.run()
