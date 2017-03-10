@@ -10,22 +10,22 @@ import numpy as np
 from nipype.workflows.fmri.fsl.estimate import create_fixed_effects_flow
 
 subject_ids = ['%02d' % i for i in np.arange(1, 20)]
+subject_ids.pop(subject_ids.index('06'))
 
-templates = {'level2_cope':'/home/gdholla1/projects/bias/data/derivatives/glm_fits_level2/level2_copes/_mask_{mask}_subject_id_{subject_id}/_fwhm_5.0/_flameo{contrast}/cope1.nii.gz',
-             'level2_varcope':'/home/gdholla1/projects/bias/data/derivatives/glm_fits_level2/level2_varcopes/_mask_{mask}_subject_id_{subject_id}/_fwhm_5.0/_flameo{contrast}/varcope1.nii.gz',
-             'level2_tdof':'/home/gdholla1/projects/bias/data/derivatives/glm_fits_level2/level2_tdof/_mask_{mask}_subject_id_{subject_id}/_fwhm_5.0/_flameo{contrast}/tdof_t1.nii.gz',             
+templates = {'level2_cope':'/home/gdholla1/projects/bias/data/derivatives/glm_fits_level2.responses/level2_copes/_subject_id_{subject_id}/_fwhm_5.0/_flameo{contrast}/cope1.nii.gz',
+             'level2_varcope':'/home/gdholla1/projects/bias/data/derivatives/glm_fits_level2.responses/level2_varcopes/_subject_id_{subject_id}/_fwhm_5.0/_flameo{contrast}/varcope1.nii.gz',
+             'level2_tdof':'/home/gdholla1/projects/bias/data/derivatives/glm_fits_level2.responses/level2_tdof/_subject_id_{subject_id}/_fwhm_5.0/_flameo{contrast}/tdof_t1.nii.gz',             
              'epi2struct':'/home/gdholla1/projects/bias/data/derivatives/registration/epi2t1weighted/epi2structmat_ants/_subject_id_{subject_id}/transformComposite.h5',
              't1weighted':'/home/gdholla1/projects/bias/data/raw/sub-{subject_id}/anat/sub-{subject_id}_T1w.nii.gz',
              'struct2mni':'/home/gdholla1/projects/bias/data/derivatives/registration/epi2t1weighted/struct2mnimat_ants/_subject_id_{subject_id}/transformComposite.h5',
              'mask':fsl.Info.standard_image('MNI152_T1_1mm_brain_mask.nii.gz')}
 
-fixedfx_flow = create_fixed_effects_flow('aron_level3')
+fixedfx_flow = create_fixed_effects_flow('response_level3')
 fixedfx_flow.base_dir = '/home/gdholla1/projects/bias/workflow_folders/'
 
 selector = pe.MapNode(nio.SelectFiles(templates), iterfield=['subject_id'], name='selector')
 
-selector.iterables = [('mask', ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C', 'STh_L', 'STh_R']), ('contrast', np.arange(17))]
-#selector.iterables = [('mask', ['STh_R']), ('contrast', [9])]
+selector.iterables = [('contrast', np.arange(2))]
 selector.inputs.subject_id = subject_ids
 
 cope_transformer = pe.MapNode(ants.ApplyTransforms(), iterfield=['input_image', 'transforms'], name='transformer')
@@ -80,7 +80,7 @@ fixedfx_flow.connect(tdof_merge, 'merged_file', fixedfx_flow.get_node('flameo'),
 
 
 ds = pe.Node(nio.DataSink(), name='datasink')
-ds.inputs.base_directory = '/home/gdholla1/projects/bias/data/derivatives/glm_fits_level3/'
+ds.inputs.base_directory = '/home/gdholla1/projects/bias/data/derivatives/glm_fits_level3.responses/'
 
 
 def volume_convert(input):
