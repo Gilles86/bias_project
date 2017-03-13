@@ -99,16 +99,18 @@ grf_cluster.iterables = [("threshold", [2.3, 2.6, 3.1])] #, 2.3
 grf_cluster.inputs.out_localmax_txt_file = True
 grf_cluster.inputs.volume = 1827243
 grf_cluster.inputs.pthreshold = 0.05
+grf_cluster.inputs.out_index_file = True
 
 fixedfx_flow.connect(smoothestimate, 'dlh', grf_cluster, 'dlh')
 fixedfx_flow.connect(fixedfx_flow.get_node('outputspec'), 'zstats', grf_cluster, 'in_file')
 
 fixedfx_flow.connect(get_volume, ('out_stat', volume_convert), grf_cluster, 'volume')
-
 grf_cluster.inputs.out_threshold_file = True
 
 fixedfx_flow.connect(fixedfx_flow.get_node('outputspec'), 'zstats', ds, 'level3_zstats')
 fixedfx_flow.connect(grf_cluster, 'threshold_file', ds, 'grf_thresholded_zstats_file')
 fixedfx_flow.connect(grf_cluster, 'localmax_txt_file', ds, 'grf_localmax_txt_file')
+fixedfx_flow.connect(grf_cluster, 'index_file', ds, 'cluster_indices')
+fixedfx_flow.connect(cope_transformer, ('output_image', listify), ds, 'transformed_copes')
 
 fixedfx_flow.run(plugin='MultiProc', plugin_args={'n_procs':6})
