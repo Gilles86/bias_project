@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import os
 from kabuki.analyze import gelman_rubin
 import pandas
@@ -85,37 +87,40 @@ sns.set_style('whitegrid')
 
 for model_str in models:
     print model_str
-    model = get_model(model_str)
-    ppc_data = hddm.utils.post_pred_gen(model, samples=500)
+    try: 
+        model = get_model(model_str)
+        ppc_data = hddm.utils.post_pred_gen(model, samples=500)
 
-    ppc_data.to_pickle('../../data/hddm_fits/ppc_{}.pkl'.format(model_str))
+        ppc_data.to_pickle('../../data/hddm_fits/ppc_{}.pkl'.format(model_str))
 
-    # Make a column that make clear which nth sample from the posterior was used
-    ppc_data['sample'] = ppc_data.index.get_level_values(1)
+        # Make a column that make clear which nth sample from the posterior was used
+        ppc_data['sample'] = ppc_data.index.get_level_values(1)
 
 
-    # Merge with real data, so we know the corresponding trial conditions
-    ppc_data_merged = model.data[['cue_validity', 'difficulty', 'subj_idx']].merge(ppc_data.set_index(ppc_data.index.get_level_values(2)), left_index=True, right_index=True)
+        # Merge with real data, so we know the corresponding trial conditions
+        ppc_data_merged = model.data[['cue_validity', 'difficulty', 'subj_idx']].merge(ppc_data.set_index(ppc_data.index.get_level_values(2)), left_index=True, right_index=True)
 
-    # Make quantiles per subject
-    data_quantiles = model.data.groupby(['subj_idx', 'cue_validity', 'difficulty']).apply(get_quantile_dataframe)
+        # Make quantiles per subject
+        data_quantiles = model.data.groupby(['subj_idx', 'cue_validity', 'difficulty']).apply(get_quantile_dataframe)
 
-    # Mean quantiles over subjects
-    data_quantiles = data_quantiles.reset_index().groupby(['cue_validity', 'difficulty', 'q', 'bound'], as_index=False).mean()
+        # Mean quantiles over subjects
+        data_quantiles = data_quantiles.reset_index().groupby(['cue_validity', 'difficulty', 'q', 'bound'], as_index=False).mean()
 
-    model_quantiles = ppc_data_merged.groupby(['sample', 'subj_idx', 'cue_validity', 'difficulty']).apply(get_quantile_dataframe)
-    model_quantiles = model_quantiles.reset_index().groupby(['sample', 'cue_validity', 'difficulty', 'q', 'bound'], as_index=False).mean()
+        model_quantiles = ppc_data_merged.groupby(['sample', 'subj_idx', 'cue_validity', 'difficulty']).apply(get_quantile_dataframe)
+        model_quantiles = model_quantiles.reset_index().groupby(['sample', 'cue_validity', 'difficulty', 'q', 'bound'], as_index=False).mean()
 
-    def hexbin(x, y, color, **kwargs):
-        plt.hexbin(x, y, **kwargs)
+        def hexbin(x, y, color, **kwargs):
+            plt.hexbin(x, y, **kwargs)
 
-    fac_model = sns.FacetGrid(model_quantiles, col='cue_validity', row='difficulty')
-    fac_model.map(hexbin, 'q_rt', 'prop', gridsize=25, cmap=plt.cm.viridis, extent=[.5, 1.25, 0, 1])
+        fac_model = sns.FacetGrid(model_quantiles, col='cue_validity', row='difficulty')
+        fac_model.map(hexbin, 'q_rt', 'prop', gridsize=35, cmap=plt.cm.viridis, extent=[.5, 1.25, 0, 1])
 
-    fac = sns.FacetGrid(data_quantiles, col='cue_validity', row='difficulty', hue='bound', hue_kws={'ls':['--', '-']})
-    fac.fig = fac_model.fig
-    fac.axes = fac_model.axes
-    fac.map(plt.plot, 'q_rt', 'prop', lw=3, color='w', marker='o', markeredgewidth=2, alpha=.7)
-    fac.fig.savefig('/home/gdholla1/projects/bias/reports/hddm_fit_model_{model_str}.pdf'.format(**locals()))
+        fac = sns.FacetGrid(data_quantiles, col='cue_validity', row='difficulty', hue='bound', hue_kws={'ls':['--', '-']})
+        fac.fig = fac_model.fig
+        fac.axes = fac_model.axes
+        fac.map(plt.plot, 'q_rt', 'prop', lw=3, color='w', marker='o', markeredgewidth=2, alpha=.7)
+        fac.fig.savefig('/home/gdholla1/projects/bias/reports/hddm_fit_model_{model_str}.pdf'.format(**locals()))
 
-    # fac.fig.set_size_inches(30, 25)
+        # fac.fig.set_size_inches(30, 25)
+    except Exception as e:
+        print mask_str, e
