@@ -6,6 +6,7 @@ import pandas
 import hddm
 import numpy as np
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 path = '/home/gdholla1/projects/bias/data/hddm_fits'
 
@@ -62,7 +63,7 @@ def get_model(model):
     return hddm_model
 
 def get_quantile_dataframe(d, q=(0.1, 0.3, 0.5, 0.7, 0.9)):
-    q_ub, q_lb, prop_ub = hddm.utils.data_quantiles(d)
+    q_lb, q_ub, prop_ub = hddm.utils.data_quantiles(d)
     
     df_ub = pandas.DataFrame({'q_rt':q_ub, 'prop':np.array(q)*prop_ub, 'q':q})
     df_ub['bound'] = 'ub'
@@ -85,13 +86,19 @@ import pickle as pkl
 sns.set_context('paper')
 sns.set_style('whitegrid')
 
+#for model_str in models[1:]:
 for model_str in models:
     print model_str
     try: 
         model = get_model(model_str)
-        ppc_data = hddm.utils.post_pred_gen(model, samples=500)
 
-        ppc_data.to_pickle('../../data/hddm_fits/ppc_{}.pkl'.format(model_str))
+        fn = '../../data/hddm_fits/ppc_{}.pkl'.format(model_str)
+
+        if os.path.exists(fn):
+            ppc_data = pandas.read_pickle(fn)
+        else:
+            ppc_data = hddm.utils.post_pred_gen(model, samples=500)
+            ppc_data.to_pickle('../../data/hddm_fits/ppc_{}.pkl'.format(model_str))
 
         # Make a column that make clear which nth sample from the posterior was used
         ppc_data['sample'] = ppc_data.index.get_level_values(1)
@@ -106,21 +113,39 @@ for model_str in models:
         # Mean quantiles over subjects
         data_quantiles = data_quantiles.reset_index().groupby(['cue_validity', 'difficulty', 'q', 'bound'], as_index=False).mean()
 
-        model_quantiles = ppc_data_merged.groupby(['sample', 'subj_idx', 'cue_validity', 'difficulty']).apply(get_quantile_dataframe)
-        model_quantiles = model_quantiles.reset_index().groupby(['sample', 'cue_validity', 'difficulty', 'q', 'bound'], as_index=False).mean()
+        model_quantiles_subj = ppc_data_merged.groupby(['sample', 'subj_idx', 'cue_validity', 'difficulty']).apply(get_quantile_dataframe)
+        model_quantiles = model_quantiles_subj.reset_index().groupby(['sample', 'cue_validity', 'difficulty', 'q', 'bound'], as_index=False).mean()
+
+        def plot_order(x, y, **kwargs):
+            y = y.values[np.argsort(x.values)]
+            x = np.sort(x.values)
+            plt.plot(x, y, **kwargs)
+            
+            plt.scatter(x[:2], y[:2], marker='x', s=40,  color='white', edgecolor='white', linewidth='2', alpha=.7)
+            plt.scatter(x[2:], y[2:], marker='o', s=40,  color='white', edgecolor='white', linewidth='2', alpha=.7)
+
 
         def hexbin(x, y, color, **kwargs):
             plt.hexbin(x, y, **kwargs)
 
-        fac_model = sns.FacetGrid(model_quantiles, col='cue_validity', row='difficulty')
-        fac_model.map(hexbin, 'q_rt', 'prop', gridsize=35, cmap=plt.cm.viridis, extent=[.5, 1.25, 0, 1])
+        sns.set_context('paper')
 
-        fac = sns.FacetGrid(data_quantiles, col='cue_validity', row='difficulty', hue='bound', hue_kws={'ls':['--', '-']})
+        data_quantiles['cue congruency'] = data_quantiles['cue_validity'].map({'invalid':'incongruent', 'neutral':'neutral', 'valid':'congruent'})
+        model_quantiles['cue congruency'] = model_quantiles['cue_validity'].map({'invalid':'incongruent', 'neutral':'neutral', 'valid':'congruent'})
+
+        fac_model = sns.FacetGrid(model_quantiles, col='cue congruency')
+        fac_model.map(hexbin, 'prop_bound', 'q_rt', gridsize=50, cmap=plt.cm.inferno, extent=[0, 1, 0.5, 1.3])
+
+        fac = sns.FacetGrid(data_quantiles, col='cue congruency', hue='q')
         fac.fig = fac_model.fig
         fac.axes = fac_model.axes
-        fac.map(plt.plot, 'q_rt', 'prop', lw=3, color='w', marker='o', markeredgewidth=2, alpha=.7)
+        # fac.map(plot_order, 'prop_bound', 'q_rt', lw=3, color='w', marker='o', markeredgewidth=2, alpha=.7)
+        fac.map(plot_order, 'prop_bound', 'q_rt', lw=3, color='w', markeredgewidth=2, alpha=.7)
+        fac.set_xlabels('Response proportion')
+        fac.set_ylabels('Response time quantiles')
+        fac.set_titles('{col_name}')
         fac.fig.savefig('/home/gdholla1/projects/bias/reports/hddm_fit_model_{model_str}.pdf'.format(**locals()))
 
         # fac.fig.set_size_inches(30, 25)
     except Exception as e:
-        print mask_str, e
+        print model_str, e

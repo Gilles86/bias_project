@@ -3,13 +3,36 @@ import os
 from kabuki.analyze import gelman_rubin
 import pandas
 import hddm
+import itertools
 
 
 path = '/home/gholland/projects/bias/data/hddm_fits'
 
 # SELECT MASK
-models = ['final_super_model_startpoint', 'final_super_model_drift']
-hemispheres = ['L', 'R']
+#models = ['final_super_model_startpoint', 'final_super_model_drift', 'final_super_model_startpoint_group', 'final_super_model_drift_group',
+          #'final_super_model_startpoint_zscored', 'final_super_model_drift_zscored', 'final_super_model_startpoint_group_zscored', 'final_super_model_drift_group_zscored',
+          #'final_super_model_drift_zscored_error_interaction', 'final_super_model_drift_group_zscored_error_interaction']
+#hemispheres = ['L', 'R']
+
+
+models = ['final_super_model_startpoint_group_zscored',
+          'final_super_model_startpoint_zscored',
+          'final_super_model_drift_group_zscored',
+          'final_super_model_drift_zscored']
+
+masks = ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']
+
+
+hemispheres = ['L']
+
+models_ = []
+for model, mask in itertools.product(models, masks):
+    models_.append('%s_%s' % (model, mask))
+
+models = models_
+
+
+
 
 if 'PBS_ARRAYID' in os.environ:
     hemisphere_idx = int(os.environ['PBS_ARRAYID']) / len(models)
@@ -131,6 +154,16 @@ def get_model(model, hemisphere):
 
         reg_descr = [z_reg, v_reg]
         hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])
+
+    if model == 'final_super_model_startpoint_group':
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue + cue_coding:{}_cue + cue_coding:{}_cue'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                  'STh_{}_B'.format(hemisphere),
+                                                                                                                  'STh_{}_C'.format(hemisphere),), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])
     
     if model == 'final_super_model_drift':
         z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
@@ -141,6 +174,173 @@ def get_model(model, hemisphere):
 
         reg_descr = [z_reg, v_reg]
         hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])
+
+    if model == 'final_super_model_drift_group':
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])
+
+    if model == 'final_super_model_startpoint_zscored':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'cue_validity'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'cue_validity'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue + cue_coding:{}_cue + cue_coding:{}_cue'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                  'STh_{}_B'.format(hemisphere),
+                                                                                                                  'STh_{}_C'.format(hemisphere),), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        
+        
+        
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])        
+        
+        
+    if model == 'final_super_model_startpoint_group_zscored':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'cue_validity'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'cue_validity'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue + cue_coding:{}_cue + cue_coding:{}_cue'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                  'STh_{}_B'.format(hemisphere),
+                                                                                                                  'STh_{}_C'.format(hemisphere),), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])        
+        
+    if model == 'final_super_model_drift_zscored':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])
+        
+    if model == 'final_super_model_drift_group_zscored':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+    if model == 'final_super_model_drift_zscored_error_interaction':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])
+        
+    if model == 'final_super_model_drift_group_zscored_error_interaction':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])
+
+
+    if model.startswith('final_super_model_startpoint_group_zscored_'):
+
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+
+        mask = model[-7:]
+
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue'.format(mask), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])        
+
+
+    if model.startswith('final_super_model_startpoint_zscored_'):
+
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+
+        mask = model[-7:]
+
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue'.format(mask), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])        
+
+
+
+    if model.startswith('final_super_model_drift_group_zscored_'):
+
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+
+        mask = model[-7:]
+
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + cue_coding'.format(mask), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])        
+
+
+    if model.startswith('final_super_model_drift_zscored_'):
+
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+
+        mask = model[-7:]
+
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + cue_coding'.format(mask), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])        
+
 
     return hddm_model
 
@@ -255,6 +455,16 @@ def fit_model(id, model=model, hemisphere=hemisphere, path=path):
         reg_descr = [z_reg, v_reg]
         hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])
     
+    if model == 'final_super_model_startpoint_group':
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue + cue_coding:{}_cue + cue_coding:{}_cue'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                  'STh_{}_B'.format(hemisphere),
+                                                                                                                  'STh_{}_C'.format(hemisphere),), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])
+    
     if model == 'final_super_model_drift':
         z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
         v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
@@ -264,6 +474,179 @@ def fit_model(id, model=model, hemisphere=hemisphere, path=path):
 
         reg_descr = [z_reg, v_reg]
         hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])
+
+
+    if model == 'final_super_model_drift_group':
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+
+    if model == 'final_super_model_startpoint_zscored':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'cue_validity'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'cue_validity'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue + cue_coding:{}_cue + cue_coding:{}_cue'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                  'STh_{}_B'.format(hemisphere),
+                                                                                                                  'STh_{}_C'.format(hemisphere),), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        
+        
+        
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])        
+        
+        
+    if model == 'final_super_model_startpoint_group_zscored':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'cue_validity'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'cue_validity'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue + cue_coding:{}_cue + cue_coding:{}_cue'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                  'STh_{}_B'.format(hemisphere),
+                                                                                                                  'STh_{}_C'.format(hemisphere),), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        
+        
+        
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])        
+        
+    if model == 'final_super_model_drift_zscored':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])
+        
+    if model == 'final_super_model_drift_group_zscored':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])
+
+
+    if model == 'final_super_model_drift_zscored_error_interaction':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])
+        
+    if model == 'final_super_model_drift_group_zscored_error_interaction':
+        
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+            
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + C(difficulty)*{}_stim +  C(difficulty)*{}_stim + cue_coding'.format('STh_{}_A'.format(hemisphere),
+                                                                                                                               'STh_{}_B'.format(hemisphere),
+                                                                                                                               'STh_{}_C'.format(hemisphere),), 'link_func': lambda x: x}        
+
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])
+
+
+    if model.startswith('final_super_model_startpoint_group_zscored_'):
+
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+
+        mask = model[-7:]
+
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue'.format(mask), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])        
+
+
+    if model.startswith('final_super_model_startpoint_zscored_'):
+
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+
+        mask = model[-7:]
+
+        z_reg = {'model': 'z ~ 0 + cue_coding + cue_coding:{}_cue'.format(mask), 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty) + cue_coding', 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])        
+
+
+
+    if model.startswith('final_super_model_drift_group_zscored_'):
+
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+
+        mask = model[-7:]
+
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + cue_coding'.format(mask), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=True, group_only_nodes=['sv', 'sz', 'st'])        
+
+
+    if model.startswith('final_super_model_drift_zscored_'):
+
+        for mask in ['STh_L_A', 'STh_L_B', 'STh_L_C', 'STh_R_A', 'STh_R_B', 'STh_R_C']:
+            data['%s_cue' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_cue' % mask].transform(lambda x: (x - x.mean())/x.std())
+            data['%s_stim' % mask] = data.groupby(['subj_idx', 'difficulty', 'response'])['%s_stim' % mask].transform(lambda x: (x - x.mean())/x.std())
+
+        mask = model[-7:]
+
+        z_reg = {'model': 'z ~ 0 + cue_coding', 'link_func': z_link_func}
+        v_reg = {'model': 'v ~ 1 + C(difficulty)*{}_stim + cue_coding'.format(mask), 'link_func': lambda x: x}        
+
+
+        reg_descr = [z_reg, v_reg]
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])        
+
 
 
     hddm_model.find_starting_values()

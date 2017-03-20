@@ -110,7 +110,8 @@ def fit_model(id, model=model, path=path):
     hddm_model.find_starting_values()
     db_fn = os.path.join(path, 'traces_{}_{}.pkl'.format(model, id))
 
-    hddm_model.sample(20000, 1000, dbname=db_fn, db='pickle')
+    #hddm_model.sample(20000, 1000, dbname=db_fn, db='pickle')
+    hddm_model.sample(15000, 1000, dbname=db_fn, db='pickle')
     return db_fn
 
 
