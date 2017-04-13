@@ -7,7 +7,7 @@ import numpy as np
 from nipype.algorithms.modelgen import SpecifyModel
 from nipype.interfaces import fsl
 
-def get_session_info(subject_id, run, shift=0, design='model1c', nucleus_signal=None, regressor_file=None):
+def get_session_info(subject_id, run, shift=0, model='model1c', nucleus_signal=None, regressor_file=None):
     import pandas
     import numpy as np
     from nipype.interfaces.base import Bunch
@@ -21,7 +21,7 @@ def get_session_info(subject_id, run, shift=0, design='model1c', nucleus_signal=
     df['onset_cue'] += shift
     df['onset_stim'] += shift
 
-    if design == 'model0':
+    if model == 'model0':
         onsets_cue = df.onset_cue.tolist()
         onsets_stim = df.onset_stim.tolist()
 
@@ -31,11 +31,11 @@ def get_session_info(subject_id, run, shift=0, design='model1c', nucleus_signal=
         onsets=[onsets_cue,
                 onsets_stim]
         
-    elif design == 'model1a':
-        conditions=['payoff_cue',
-                    'neutral_cue',
-                    'difficult_rdm',
-                    'easy_rdm']
+    elif model == 'model1a':
+        conditions=['payoff cue',
+                    'neutral cue',
+                    'hard rdm',
+                    'easy rdm']
         
         onsets=[df[df.cue != 'neutral'].onset_cue.tolist(),
                 df[df.cue == 'neutral'].onset_cue.tolist(),
@@ -45,10 +45,23 @@ def get_session_info(subject_id, run, shift=0, design='model1c', nucleus_signal=
         info = Bunch(conditions=conditions,
                   onsets=onsets,
                   durations=[[1]] * len(conditions))
+
+    elif design == 'model1b':
+        conditions= ['left', 'right', 'neutral', 'easy', 'hard']
         
-    elif design == 'model1c':
-        conditions=['payoff_cue',
-                    'neutral_cue',
+        onsets=[df[df.cue == 'left'].onset_cue.tolist(),
+                df[df.cue == 'right'].onset_cue.tolist(),                
+                df[df.cue == 'neutral'].onset_cue.tolist(),
+                df[df.difficulty == 'easy'].onset_stim.tolist(),
+                df[df.difficulty == 'hard'].onset_stim.tolist()]
+
+        info = Bunch(conditions=conditions,
+                  onsets=onsets,
+                  durations=[[1]] * len(conditions))
+        
+    elif model == 'model1c':
+        conditions=['payoff cue',
+                    'neutral cue',
                     'hard_rdm (correct)',
                     'easy_rdm (correct)',                    
                     'hard_rdm (error)',                    
@@ -83,10 +96,10 @@ def get_session_info(subject_id, run, shift=0, design='model1c', nucleus_signal=
 
 project_folder = '/home/gdholla1/projects/bias/'
 
-workflow = pe.Workflow(name='bias_correlation')
+workflow = pe.Workflow(name='level12_no_ppi')
 workflow.base_dir = os.path.join(project_folder, 'workflow_folders')
 
-identity = pe.Node(util.IdentityInterface(fields=['subject_id', 'mask']), name='identity')
+identity = pe.Node(util.IdentityInterface(fields=['subject_id', 'model']), name='identity')
 
 templates = {'highpassed_files':os.path.join(project_folder, 'data', 'processed', 'feat_preprocess', 'highpassed_files', '_subject_id_{subject_id}', '_fwhm_{fwhm}', '_addmean*', 'sub-{subject_id}*.nii.gz'),
              'realignment_parameters':os.path.join(project_folder, 'data', 'processed', 'feat_preprocess', 'motion_parameters', '_subject_id_{subject_id}', '_fwhm_0.0', '_realign*', 'sub-{subject_id}*.nii.gz.par'),
@@ -94,26 +107,47 @@ templates = {'highpassed_files':os.path.join(project_folder, 'data', 'processed'
 
 subject_ids = ['%02d' % i for i in np.arange(1, 20)]
 
-identity.iterables = [('subject_id', subject_ids),]
+identity.iterables = [('subject_id', subject_ids[:1]), ('model', ['model1a', 'model1c'])]
 
 selector = pe.Node(nio.SelectFiles(templates), name='selector')
 selector.iterables = [('fwhm', [5.0])]
 
 workflow.connect(identity, 'subject_id', selector, 'subject_id')
-workflow.connect(identity, 'mask', selector, 'mask')
 
 
-contrasts = [('payoff cue > neutral cue', 'T', ['payoff_cue', 'neutral_cue'], [1.0, -1.0]),
-             ('neutral cue > payoff cue', 'T', ['payoff_cue', 'neutral_cue'], [-1.0, 1.0]),
-             ('hard rdm (correct) > easy rdm (correct)', 'T', ['hard_rdm (correct)', 'easy_rdm (correct)'], [1.0, -1.0]), 
-             ('easy rdm (correct) > hard rdm (correct)', 'T', ['hard_rdm (correct)', 'easy_rdm (correct)'], [-1.0, 1.0]),  
-             ('easy rdm (error) > easy rdm (correct)', 'T', ['easy_rdm (error)', 'easy_rdm (correct)'], [1.0, -1.0]),   
-             ('easy rdm (correct) > easy rdm (error)', 'T', ['easy_rdm (error)', 'easy_rdm (correct)'], [-1.0, 1.0]),   
-             ('hard rdm (error) > hard rdm (correct)', 'T', ['hard_rdm (error)', 'hard_rdm (correct)'], [1.0, -1.0]),   
-             ('hard rdm (correct) > hard rdm (error)', 'T', ['hard_rdm (error)', 'hard_rdm (correct)'], [-1.0, 1.0]),]
+def get_contrasts(model):
+
+    if model == 'model1a':
+
+        contrasts = [('payoff cue > neutral cue', 'T', ['payoff cue', 'neutral cue'], [1.0, -1.0]),
+                     ('neutral cue > payoff cue', 'T', ['payoff cue', 'neutral cue'], [-1.0, 1.0]),
+                     ('hard rdm > easy rdm', 'T', ['hard rdm', 'easy rdm'], [1.0, -1.0]), 
+                     ('easy rdm > hard rdm', 'T', ['easy rdm', 'hard rdm'], [1.0, -1.0]), ]
 
 
-#  *** GET MODEL AS INPUT FOR PPI ***
+    elif model == 'model1b':
+
+        contrasts = [('left cue > neutral cue', 'T', ['left', 'neutral'], [1.0, -1.0]),
+                     ('right cue > neutral cue', 'T', ['right', 'neutral'], [1.0, -1.0]),
+                     ('left cue > right cue', 'T', ['left', 'right'], [1.0, -1.0]), 
+                     ('right cue > left cue', 'T', ['right', 'left'], [1.0, -1.0]), 
+                     ('hard rdm > easy rdm', 'T', ['hard', 'easy'], [1.0, -1.0]), 
+                     ('easy rdm > hard rdm', 'T', ['easy', 'hard'], [1.0, -1.0]), ]
+
+    elif model == 'model1c':
+        contrasts = [('payoff cue > neutral cue', 'T', ['payoff cue', 'neutral cue'], [1.0, -1.0]),
+                     ('neutral cue > payoff cue', 'T', ['payoff cue', 'neutral cue'], [-1.0, 1.0]),
+                     ('hard rdm (correct) > easy rdm (correct)', 'T', ['hard_rdm (correct)', 'easy_rdm (correct)'], [1.0, -1.0]), 
+                     ('easy rdm (correct) > hard rdm (correct)', 'T', ['hard_rdm (correct)', 'easy_rdm (correct)'], [-1.0, 1.0]),  
+                     ('easy rdm (error) > easy rdm (correct)', 'T', ['easy_rdm (error)', 'easy_rdm (correct)'], [1.0, -1.0]),   
+                     ('easy rdm (correct) > easy rdm (error)', 'T', ['easy_rdm (error)', 'easy_rdm (correct)'], [-1.0, 1.0]),   
+                     ('hard rdm (error) > hard rdm (correct)', 'T', ['hard_rdm (error)', 'hard_rdm (correct)'], [1.0, -1.0]),   
+                     ('hard rdm (correct) > hard rdm (error)', 'T', ['hard_rdm (error)', 'hard_rdm (correct)'], [-1.0, 1.0]),]
+    return contrasts
+
+
+
+#  *** GET MODEL ***
 
 specifymodel1 = pe.Node(SpecifyModel(), name='specifymodel1')
 
@@ -126,7 +160,7 @@ workflow.connect(selector, 'highpassed_files', specifymodel1, 'functional_runs')
 
 
 session_info_getter = pe.MapNode(util.Function(function=get_session_info,
-                                     input_names=['subject_id', 'run', 'shift'],
+                                     input_names=['subject_id', 'run', 'model', 'shift'],
                                      output_names=['session_info']),
                        iterfield=['run'],
                        name='session_info_getter')
@@ -134,14 +168,22 @@ session_info_getter = pe.MapNode(util.Function(function=get_session_info,
 session_info_getter.inputs.run = [1,2,3]
 session_info_getter.inputs.shift = -3.
 
+contrast_getter = pe.Node(util.Function(function=get_contrasts,
+                                        input_names=['model'],
+                                        output_names=['contrasts']),
+                          name='contrast_getter')
+
 workflow.connect(identity, 'subject_id', session_info_getter, 'subject_id')
+workflow.connect(identity, 'model', session_info_getter, 'model')
+workflow.connect(identity, 'model', contrast_getter, 'model')
 workflow.connect(session_info_getter, 'session_info', specifymodel1, 'subject_info')
 
 level1design1 = pe.Node(interface=fsl.Level1Design(), name="level1design1")
 workflow.connect(specifymodel1, 'session_info', level1design1, 'session_info')
+workflow.connect(contrast_getter, 'contrasts', level1design1, 'contrasts')
 level1design1.inputs.interscan_interval = 3.0
-level1design1.inputs.bases = {'dgamma': {'derivs': False}}
-level1design1.inputs.contrasts = contrasts
+level1design1.inputs.bases = {'dgamma': {'derivs': True}}
+#level1design1.inputs.contrasts = contrasts
 level1design1.inputs.model_serial_correlations = True
 
 modelgen1 = pe.MapNode(interface=fsl.FEATModel(), iterfield=['ev_files', 'fsf_file'], name='modelgen1')
@@ -151,8 +193,7 @@ workflow.connect(level1design1, 'fsf_files', modelgen1, 'fsf_file')
 
 
 iterfield = ['design_file', 'in_file', 'tcon_file']
-modelestimate = pe.MapNode(interface=fsl.FILMGLS(smooth_autocorr=True,
-                                                         mask_size=5),
+modelestimate = pe.MapNode(interface=fsl.FILMGLS(smooth_autocorr=True),
                        name='modelestimate',
                        iterfield=iterfield)
 

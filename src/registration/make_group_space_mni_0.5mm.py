@@ -42,34 +42,12 @@ workflow.base_dir = os.path.join(projects_dir, 'workflow_folders')
 
 input_node = pe.Node(util.IdentityInterface(fields=['FLASH']), name='input_node')
 
-templates = {'FLASH1':'/home/gdholla1/projects/bias/data/raw/sub-{subject_id}/anat/sub-{subject_id}_T2_weighted_flash_echo_11.22.nii.gz',
-             'FLASH2':'/home/gdholla1/projects/bias/data/raw/sub-{subject_id}/anat/sub-{subject_id}_T2_weighted_flash_echo_20.39.nii.gz',
-             'FLASH3':'/home/gdholla1/projects/bias/data/raw/sub-{subject_id}/anat/sub-{subject_id}_T2_weighted_flash_echo_29.57.nii.gz'}
-
-
+templates = {'mean_flash':'/home/gdholla1/projects/bias/data/derivatives/sub-{subject_id}/mean_flash/sub-{subject_id}_FLASH_echo_11.22_merged_mean_brain.nii.gz',}
 
 selector = pe.MapNode(nio.SelectFiles(templates), iterfield='subject_id', name='selector')
 subject_ids = ['%02d' % i for i in np.arange(1, 20)]
 selector.inputs.subject_id = subject_ids
 
-flash_list_merger = pe.MapNode(util.Merge(numinputs=3), iterfield=['in1', 'in2', 'in3'], name='flash_list_merger')
-workflow.connect(selector, 'FLASH1', flash_list_merger, 'in1')
-workflow.connect(selector, 'FLASH2', flash_list_merger, 'in2')
-workflow.connect(selector, 'FLASH3', flash_list_merger, 'in3')
-
-echo_merger = pe.MapNode(fsl.Merge(dimension='t'), iterfield=['in_files'], name='echo_merger')
-workflow.connect(flash_list_merger, 'out', echo_merger, 'in_files')
-
-
-echo_meaner = pe.MapNode(fsl.MeanImage(dimension='T'), iterfield=['in_file'], name='echo_meaner')
-workflow.connect(echo_merger, 'merged_file', echo_meaner, 'in_file')
-
-better = pe.MapNode(fsl.BET(frac=0.3), iterfield=['in_file'], name='better')
-better.inputs.padding = True
-
-workflow.connect(echo_meaner, 'out_file', better, 'in_file')
-
-# get_first = lambda x: x[0]
 
 n_iterations = 5
 
@@ -82,7 +60,7 @@ ds = pe.Node(nio.DataSink(base_directory='/home/gdholla1/data/bias/mni_group_tem
 for i in xrange(n_iterations):
     ants_registers.append(reg.clone('register_%d' % (i + 1)))
     
-    workflow.connect(better, 'out_file', ants_registers[-1], 'moving_image')
+    workflow.connect(selector, 'mean_flash', ants_registers[-1], 'moving_image')
     
 #     if i == 0:
 #         workflow.connect(input_node, ('FLASH', get_first), ants_registers[-1], 'fixed_image')
@@ -105,5 +83,5 @@ for i in xrange(n_iterations):
     
 workflow.write_graph()
 
-#workflow.run()
-workflow.run(plugin='MultiProc', plugin_args={'n_procs':4})
+workflow.run()
+#workflow.run(plugin='MultiProc', plugin_args={'n_procs':4})

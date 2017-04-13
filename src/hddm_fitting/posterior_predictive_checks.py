@@ -47,6 +47,8 @@ def get_model(model):
     elif free_pars == 'all':
         hddm_model = hddm.HDDMRegressor(data, reg_descr, include=('sv', 'sz', 'st'), bias=True, group_only_regressors=False, group_only_nodes=['sv', 'sz', 'st'])
     
+    elif free_pars == 'none':
+        hddm_model = hddm.HDDMRegressor(data, reg_descr, bias=True, group_only_regressors=False)
     
     # NOW FIND, LOAD, AND CONCAT TRACES
     reg = re.compile('.*/traces_{model}_[0-9]+.pkl'.format(**locals()))
@@ -87,7 +89,7 @@ sns.set_context('paper')
 sns.set_style('whitegrid')
 
 #for model_str in models[1:]:
-for model_str in models:
+for model_str in models[-3:]:
     print model_str
     try: 
         model = get_model(model_str)
