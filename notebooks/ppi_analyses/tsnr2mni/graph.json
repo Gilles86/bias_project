@@ -1,0 +1,50 @@
+[
+    {
+        "group": 1,
+        "imports": [],
+        "name": "0_selector",
+        "size": 1
+    },
+    {
+        "group": 1,
+        "imports": [
+            "0_selector"
+        ],
+        "name": "1_transform_merger",
+        "size": 1
+    },
+    {
+        "group": 1,
+        "imports": [
+            "1_transform_merger",
+            "0_selector"
+        ],
+        "name": "2_transformer",
+        "size": 1
+    },
+    {
+        "group": 1,
+        "imports": [
+            "2_transformer"
+        ],
+        "name": "3_merger",
+        "size": 1
+    },
+    {
+        "group": 1,
+        "imports": [
+            "3_merger"
+        ],
+        "name": "4_meaner",
+        "size": 1
+    },
+    {
+        "group": 1,
+        "imports": [
+            "4_meaner",
+            "2_transformer"
+        ],
+        "name": "5_datasink",
+        "size": 1
+    }
+]

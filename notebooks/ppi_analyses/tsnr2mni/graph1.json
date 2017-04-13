@@ -1,0 +1,92 @@
+{
+    "groups": [
+        {
+            "name": "Group_00001",
+            "procs": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5
+            ],
+            "total": 6
+        }
+    ],
+    "links": [
+        {
+            "source": 1,
+            "target": 2,
+            "value": 1
+        },
+        {
+            "source": 0,
+            "target": 2,
+            "value": 1
+        },
+        {
+            "source": 0,
+            "target": 1,
+            "value": 1
+        },
+        {
+            "source": 3,
+            "target": 4,
+            "value": 1
+        },
+        {
+            "source": 4,
+            "target": 5,
+            "value": 1
+        },
+        {
+            "source": 2,
+            "target": 5,
+            "value": 1
+        },
+        {
+            "source": 2,
+            "target": 3,
+            "value": 1
+        }
+    ],
+    "maxN": 6,
+    "nodes": [
+        {
+            "group": 1,
+            "name": "0_selector",
+            "report": "/tmp/user/1001/tmp7HsRS1/tsnr2mni/selector/_report/report.rst",
+            "result": "/tmp/user/1001/tmp7HsRS1/tsnr2mni/selector/result_selector.pklz"
+        },
+        {
+            "group": 1,
+            "name": "1_transform_merger",
+            "report": "/tmp/user/1001/tmp3LyQGn/tsnr2mni/transform_merger/_report/report.rst",
+            "result": "/tmp/user/1001/tmp3LyQGn/tsnr2mni/transform_merger/result_transform_merger.pklz"
+        },
+        {
+            "group": 1,
+            "name": "2_transformer",
+            "report": "/tmp/user/1001/tmpvFqFwW/tsnr2mni/transformer/_report/report.rst",
+            "result": "/tmp/user/1001/tmpvFqFwW/tsnr2mni/transformer/result_transformer.pklz"
+        },
+        {
+            "group": 1,
+            "name": "3_merger",
+            "report": "/tmp/user/1001/tmpMCX92u/tsnr2mni/merger/_report/report.rst",
+            "result": "/tmp/user/1001/tmpMCX92u/tsnr2mni/merger/result_merger.pklz"
+        },
+        {
+            "group": 1,
+            "name": "4_meaner",
+            "report": "/tmp/user/1001/tmpHoMblD/tsnr2mni/meaner/_report/report.rst",
+            "result": "/tmp/user/1001/tmpHoMblD/tsnr2mni/meaner/result_meaner.pklz"
+        },
+        {
+            "group": 1,
+            "name": "5_datasink",
+            "report": "/tmp/user/1001/tmp6TYEMj/tsnr2mni/datasink/_report/report.rst",
+            "result": "/tmp/user/1001/tmp6TYEMj/tsnr2mni/datasink/result_datasink.pklz"
+        }
+    ]
+}
